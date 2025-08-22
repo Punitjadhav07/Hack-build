@@ -1,0 +1,111 @@
+/* Base layout matching the provided dark modal UI */
+.login-root {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+ 
+  color: #ffffff;
+}
+
+.login-card {
+  width: 400px;
+  background: #2a2a2a;
+  border: 1px solid #404040;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  padding: 32px;
+}
+
+.login-header { text-align: center; }
+.login-title { margin: 0 0 8px; font-size: 24px; font-weight: 600; }
+.login-subtitle { margin: 0 0 24px; color: #a0a0a0; font-size: 14px; }
+
+.role-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  background: #333333;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.error-message {
+  background: #ff4444;
+  color: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.role-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  background: transparent;
+  color: #a0a0a0;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+.role-btn.active { 
+  background: #ffffff; 
+  color: #333333; 
+  font-weight: 500;
+}
+.role-btn:not(.active):hover {
+  background: #404040;
+  color: #ffffff;
+}
+
+.login-form { display: grid; gap: 16px; }
+.field { display: grid; gap: 8px; text-align: left; }
+.field-label { color: #ffffff; font-size: 14px; font-weight: 500; }
+
+.input {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  background: #333333;
+  border: 1px solid #404040;
+  color: #ffffff;
+  padding: 0 16px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+.input:focus {
+  outline: none;
+  border-color: #666666;
+}
+.input::placeholder { color: #808080; }
+
+.submit {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  border: none;
+  background: #ffffff;
+  color: #333333;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.submit:hover { background-color: #f0f0f0; }
+
+.login-footer { margin-top: 24px; text-align: center; }
+.link { color: #ffffff; text-decoration: none; }
+.link:hover { text-decoration: underline; }
+.divider { height: 1px; background: #404040; margin: 20px 0; }
+.signup { color: #a0a0a0; font-size: 14px; }
+.signup .link { color: #ffffff; }
+
+
