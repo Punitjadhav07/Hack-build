@@ -7,6 +7,7 @@ function EventCard({ event, onRegister, onFeedback, onSelect, onHide, onDelete, 
   const [showFeedbackForm, setShowFeedbackForm] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [showTicketViewer, setShowTicketViewer] = useState(false)
+  const [ticketReady, setTicketReady] = useState(false)
 
   const handleFeedbackSubmit = (feedbackData) => {
     if (onFeedback) {
@@ -14,6 +15,15 @@ function EventCard({ event, onRegister, onFeedback, onSelect, onHide, onDelete, 
     }
     setShowFeedbackForm(false)
     setShowFeedback(true)
+  }
+
+  const handleViewTicket = async () => {
+    setShowTicketViewer(true)
+    setTicketReady(false)
+    // Small delay to ensure modal renders first
+    setTimeout(() => {
+      setTicketReady(true)
+    }, 100)
   }
 
   const canGiveFeedback = event.status === 'attended' || event.status === 'registered'
@@ -51,7 +61,7 @@ function EventCard({ event, onRegister, onFeedback, onSelect, onHide, onDelete, 
         <div className="btn-row">
           {event.status === 'registered' ? (
             <>
-              <button className="btn btn-outline" onClick={(e) => { e.stopPropagation(); setShowTicketViewer(true) }}>🧾 View Ticket</button>
+              <button className="btn btn-outline" onClick={(e) => { e.stopPropagation(); handleViewTicket() }}>🧾 View Ticket</button>
               {canGiveFeedback && !isAdmin && (
                 <button className="btn btn-outline" onClick={(e) => { e.stopPropagation(); setShowFeedbackForm(true) }}>⭐ Give Feedback</button>
               )}
@@ -128,7 +138,7 @@ function EventCard({ event, onRegister, onFeedback, onSelect, onHide, onDelete, 
       )}
 
       {/* Ticket Viewer */}
-      {showTicketViewer && (
+      {showTicketViewer && ticketReady && (
         <TicketViewer 
           event={event} 
           currentUser={currentUser} 
