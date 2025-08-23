@@ -4,7 +4,9 @@ import StatsGrid from '../components/dashboard/StatsGrid'
 import UpcomingEvents from '../components/dashboard/UpcomingEvents'
 import Notifications from '../components/dashboard/Notifications'
 import EventCards from '../components/dashboard/EventCards'
-import { getStore, registerForEvent, getUserEvents, seedIfEmpty, migrateStore } from '../admin/dashboard/store'
+import UserCalendar from '../components/calendar/UserCalendar'
+import NotificationPopup from '../components/dashboard/NotificationPopup'
+import { getStore, registerForEvent, getUserEvents, seedIfEmpty, migrateStore, addFeedback, getFeedbackForEvent, updateStore } from '../admin/dashboard/store'
 import QRCode from 'qrcode'
 
 function Dashboard({ onLogout, stats, upcomingEvents, notifications, events }) {
@@ -12,6 +14,7 @@ function Dashboard({ onLogout, stats, upcomingEvents, notifications, events }) {
   const [tick, setTick] = useState(0)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [qrByEventId, setQrByEventId] = useState({})
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false)
 
   const currentUser = useMemo(() => {
     try {
@@ -32,7 +35,34 @@ function Dashboard({ onLogout, stats, upcomingEvents, notifications, events }) {
   }, [])
 
   const store = getStore()
-  const unreadNotifications = (notifications || store.notifications || []).filter(n => n.unread).length
+  const allNotifications = (notifications || store.notifications || [])
+  const unreadNotifications = allNotifications.filter(n => n.unread).length
+
+  const handleMarkNotificationAsRead = (notificationId) => {
+    updateStore(store => {
+      store.notifications = store.notifications.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, unread: false }
+          : notification
+      )
+      return store
+    })
+    
+    // Trigger re-render
+    setTick(t => t + 1)
+  }
+
+  const handleDeleteNotification = (notificationId) => {
+    updateStore(store => {
+      store.notifications = store.notifications.filter(notification => 
+        notification.id !== notificationId
+      )
+      return store
+    })
+    
+    // Trigger re-render
+    setTick(t => t + 1)
+  }
 
   function handleRegisterEvent(ev) {
     if (!currentUser) return
@@ -41,9 +71,33 @@ function Dashboard({ onLogout, stats, upcomingEvents, notifications, events }) {
     setActiveTab('events')
   }
 
+  function handleFeedback(event, feedbackData) {
+    if (!currentUser) return
+    addFeedback({
+      eventId: event.id,
+      userId: currentUser.id || currentUser.email,
+      userName: currentUser.name || 'Anonymous',
+      rating: feedbackData.rating,
+      comment: feedbackData.comment
+    })
+    // Trigger a re-render
+    setTick(t => t + 1)
+  }
+
+
+
   const myEvents = getUserEvents(currentUser?.id || currentUser?.email)
   const publishedEvents = store.events.filter(e => e.status === 'published')
   const calcSpots = (e) => Math.max(0, (e.capacity || 0) - (e.registered || 0))
+
+  // Get feedback data for events
+  const feedbackByEvent = {}
+  store.feedback.forEach(f => {
+    if (!feedbackByEvent[f.eventId]) {
+      feedbackByEvent[f.eventId] = []
+    }
+    feedbackByEvent[f.eventId].push(f)
+  })
 
   // --- Date utilities to normalize various date/time inputs ---
   function parseDateTime(dateStr, timeStr) {
@@ -122,7 +176,11 @@ function Dashboard({ onLogout, stats, upcomingEvents, notifications, events }) {
           <span className="muted">Dashboard</span>
         </div>
         <div className="dash-header-right">
-          <button className="icon-btn" aria-label="Notifications">
+          <button 
+            className="icon-btn" 
+            aria-label="Notifications"
+            onClick={() => setShowNotificationPopup(true)}
+          >
             <span className="bell">🔔</span>
             {unreadNotifications > 0 && (
               <span className="badge">{unreadNotifications}</span>
@@ -177,8 +235,24 @@ function Dashboard({ onLogout, stats, upcomingEvents, notifications, events }) {
                 { color: 'stat-red', label: 'Notifications', value: unreadNotifications },
               ]} />
 
+              <UserCalendar currentUser={currentUser} />
+
               <div className="grid-2">
-                <UpcomingEvents items={upcomingEvents || myEvents.map(e => ({ id: e.id, title: e.title, date: `${e.date} ${e.time}` }))} />
+                <UpcomingEvents items={upcomingEvents || (() => {
+                  const now = new Date()
+                  const upcoming = myEvents
+                    .map(e => ({ e, dt: parseDateTime(e.date, e.time) }))
+                    .filter(x => x.dt)
+                    .filter(x => x.dt >= startOfDay(now))
+                    .sort((a,b) => a.dt - b.dt)
+                    .slice(0, 3) // Show only next 3 upcoming events
+                    .map(({ e, dt }) => ({ 
+                      id: e.id, 
+                      title: e.title, 
+                      date: `${formatDate(dt)} ${formatTime(dt)}` 
+                    }))
+                  return upcoming
+                })()} />
                 <Notifications items={(notifications || store.notifications || []).map(n => ({...n, message: n.message || n.msg }))} />
               </div>
             </div>
@@ -201,10 +275,14 @@ function Dashboard({ onLogout, stats, upcomingEvents, notifications, events }) {
                   time: e.time,
                   location: e.location,
                   availableSpots: calcSpots(e),
+
                 }))}
                 onRegister={() => {}}
-                onFeedback={(ev) => alert(`Feedback for ${ev.title}`)}
+                onFeedback={handleFeedback}
                 onSelect={(ev) => setSelectedEvent(ev)}
+
+                feedbackByEvent={feedbackByEvent}
+                currentUser={currentUser}
               />
             </div>
           )}
@@ -225,10 +303,14 @@ function Dashboard({ onLogout, stats, upcomingEvents, notifications, events }) {
                   time: e.time,
                   location: e.location,
                   availableSpots: calcSpots(e),
+
                 }))}
                 onRegister={(ev) => handleRegisterEvent(ev)}
-                onFeedback={() => {}}
+                onFeedback={handleFeedback}
                 onSelect={(ev) => setSelectedEvent(ev)}
+
+                feedbackByEvent={feedbackByEvent}
+                currentUser={currentUser}
               />
             </div>
           )}
@@ -326,6 +408,16 @@ function Dashboard({ onLogout, stats, upcomingEvents, notifications, events }) {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Notification Popup */}
+          {showNotificationPopup && (
+            <NotificationPopup
+              notifications={allNotifications}
+              onClose={() => setShowNotificationPopup(false)}
+              onMarkAsRead={handleMarkNotificationAsRead}
+              onDeleteNotification={handleDeleteNotification}
+            />
           )}
         </main>
       </div>

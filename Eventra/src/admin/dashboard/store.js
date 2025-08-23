@@ -12,6 +12,7 @@ function readStore() {
     notifications: [],
     registrations: [],
     reports: [], // {id, userId, reason, time}
+    feedback: [], // {id, eventId, userId, userName, rating, comment, submittedAt}
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -27,6 +28,7 @@ function readStore() {
         users: parsed?.users || [],
         notifications: parsed?.notifications || [],
         registrations: parsed?.registrations || [],
+        feedback: parsed?.feedback || [],
       }
     }
   } catch {}
@@ -189,20 +191,137 @@ export function getUserEvents(userId) {
 export function seedIfEmpty() {
   const s = readStore()
   if (s.events.length === 0) {
+    const techSummitId = Date.now()
     s.events.push({
-      id: Date.now(),
-      title: 'Tech Innovation Summit 2024',
+      id: techSummitId,
+      title: 'Tech Innovation Summit 2025',
       department: 'Computer Science Department',
-      date: 'Jan 15, 2024',
+      date: 'Mar 15, 2025',
       time: '09:00 AM',
       location: 'Main Auditorium',
       status: 'published',
       capacity: 500,
       registered: 0,
       type: 'conference',
+
       description: 'Annual technology and innovation conference featuring industry leaders.'
     })
-    s.stats.totalEvents = 1
+    
+    // Add some attended events for testing feedback
+    const workshopId = Date.now() + 1
+    s.events.push({
+      id: workshopId,
+      title: 'Web Development Workshop',
+      department: 'Computer Science Department',
+      date: 'Feb 20, 2025',
+      time: '02:00 PM',
+      location: 'Computer Lab 101',
+      status: 'published',
+      capacity: 30,
+      registered: 25,
+      type: 'workshop',
+      description: 'Hands-on workshop on modern web development technologies.'
+    })
+    
+    // Add sample feedback for testing
+    s.feedback.push({
+      id: Date.now() + 100,
+      eventId: workshopId,
+      userId: 'student1@example.com',
+      userName: 'John Smith',
+      rating: 5,
+      comment: 'Excellent workshop! The instructor was very knowledgeable and the hands-on exercises were really helpful. I learned a lot about modern web development.',
+      submittedAt: '2025-02-20T16:30:00.000Z'
+    })
+    
+    s.feedback.push({
+      id: Date.now() + 101,
+      eventId: workshopId,
+      userId: 'student2@example.com',
+      userName: 'Sarah Johnson',
+      rating: 4,
+      comment: 'Great workshop overall. The content was well-structured and practical. Would have liked more time for the advanced topics.',
+      submittedAt: '2025-02-20T17:15:00.000Z'
+    })
+    
+    // Add feedback to Tech Innovation Summit 2024
+    s.feedback.push({
+      id: Date.now() + 200,
+      eventId: techSummitId,
+      userId: 'alex@example.com',
+      userName: 'Alex Chen',
+      rating: 5,
+      comment: 'Outstanding conference! The keynote speakers were industry leaders and the networking opportunities were incredible. Highly recommend for anyone in tech.',
+      submittedAt: '2025-03-15T18:30:00.000Z'
+    })
+    
+    s.feedback.push({
+      id: Date.now() + 201,
+      eventId: techSummitId,
+      userId: 'maria@example.com',
+      userName: 'Maria Rodriguez',
+      rating: 4,
+      comment: 'Great insights into the latest tech trends. The panel discussions were engaging and I learned a lot about AI and machine learning applications.',
+      submittedAt: '2025-03-15T19:15:00.000Z'
+    })
+    
+    // Add third event
+    s.events.push({
+      id: Date.now() + 2,
+      title: 'UI/UX Design Workshop',
+      department: 'Design Department',
+      date: 'Apr 10, 2025', 
+      time: '10:00 AM',
+      location: 'Design Lab',
+      status: 'published',
+      capacity: 40,
+      registered: 15,
+      type: 'workshop',
+      description: 'Learn the fundamentals of user interface and user experience design.'
+    })
+
+    // Add sample notifications
+    s.notifications.push({
+      id: Date.now() + 300,
+      title: 'Welcome to Eventra!',
+      message: 'Your account has been successfully created. Start exploring events and register for exciting activities.',
+      type: 'success',
+      unread: true,
+      timestamp: new Date().toISOString(),
+      category: 'System'
+    })
+    
+    s.notifications.push({
+      id: Date.now() + 301,
+      title: 'New Event Available',
+      message: 'Tech Innovation Summit 2025 is now open for registration. Don\'t miss this amazing opportunity!',
+      type: 'event',
+      unread: true,
+      timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+      category: 'Events'
+    })
+    
+    s.notifications.push({
+      id: Date.now() + 302,
+      title: 'Event Reminder',
+      message: 'Your registered event "Web Development Workshop" starts in 2 hours. Don\'t forget to bring your laptop!',
+      type: 'reminder',
+      unread: false,
+      timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+      category: 'Reminders'
+    })
+    
+    s.notifications.push({
+      id: Date.now() + 303,
+      title: 'System Update',
+      message: 'We\'ve added new features to improve your experience. Check out the updated calendar and notification system.',
+      type: 'update',
+      unread: true,
+      timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      category: 'Updates'
+    })
+    
+    s.stats.totalEvents = 2
     writeStore(s)
   }
 }
@@ -210,6 +329,17 @@ export function seedIfEmpty() {
 export function migrateStore() {
   const s = readStore()
   let changed = false
+  
+  // Remove Career Fair 2023 if it exists (cleanup)
+  const careerFairIndex = s.events.findIndex(e => e.title === 'Career Fair 2023')
+  if (careerFairIndex !== -1) {
+    const careerFairId = s.events[careerFairIndex].id
+    s.events.splice(careerFairIndex, 1)
+    s.feedback = s.feedback.filter(f => f.eventId !== careerFairId)
+    changed = true
+  }
+  
+  // Add ticket prices to existing events if they don't have them
   s.events = (s.events || []).map(e => {
     const next = {
       type: 'general',
@@ -219,12 +349,133 @@ export function migrateStore() {
       location: e.location || 'TBD',
       capacity: (e.capacity ?? 50),
       registered: (e.registered ?? 0),
+
       ...e,
     }
     if (next !== e) changed = true
     return next
   })
+  
+
+  
   if (changed) writeStore(s)
+}
+
+// Add sample attended events and feedback for testing
+export function addSampleFeedbackData() {
+  const s = readStore()
+  let added = false
+  
+  // Remove Career Fair 2023 if it exists
+  const careerFairIndex = s.events.findIndex(e => e.title === 'Career Fair 2023')
+  if (careerFairIndex !== -1) {
+    const careerFairId = s.events[careerFairIndex].id
+    // Remove the event
+    s.events.splice(careerFairIndex, 1)
+    // Remove any feedback for this event
+    s.feedback = s.feedback.filter(f => f.eventId !== careerFairId)
+    added = true
+  }
+  
+  // Check if we already have the sample attended events
+  const hasWorkshop = s.events.some(e => e.title === 'Web Development Workshop' && e.status === 'attended')
+  
+  if (!hasWorkshop) {
+    const workshopId = Date.now() + 1000
+    s.events.push({
+      id: workshopId,
+      title: 'Web Development Workshop',
+      department: 'Computer Science Department',
+      date: 'Feb 20, 2025',
+      time: '02:00 PM',
+      location: 'Computer Lab 101',
+      status: 'attended',
+      capacity: 30,
+      registered: 25,
+      type: 'workshop',
+      description: 'Hands-on workshop on modern web development technologies.'
+    })
+    
+    // Add sample feedback for workshop
+    s.feedback.push({
+      id: Date.now() + 2000,
+      eventId: workshopId,
+      userId: 'student1@example.com',
+      userName: 'John Smith',
+      rating: 5,
+      comment: 'Excellent workshop! The instructor was very knowledgeable and the hands-on exercises were really helpful. I learned a lot about modern web development.',
+      submittedAt: '2025-02-20T16:30:00.000Z'
+    })
+    
+    s.feedback.push({
+      id: Date.now() + 2001,
+      eventId: workshopId,
+      userId: 'student2@example.com',
+      userName: 'Sarah Johnson',
+      rating: 4,
+      comment: 'Great workshop overall. The content was well-structured and practical. Would have liked more time for the advanced topics.',
+      submittedAt: '2025-02-20T17:15:00.000Z'
+    })
+    
+    added = true
+  }
+  
+  // Add feedback to Tech Innovation Summit 2025 if it exists
+  const techSummit = s.events.find(e => e.title === 'Tech Innovation Summit 2025')
+  if (techSummit && !s.feedback.some(f => f.eventId === techSummit.id)) {
+    s.feedback.push({
+      id: Date.now() + 3000,
+      eventId: techSummit.id,
+      userId: 'alex@example.com',
+      userName: 'Alex Chen',
+      rating: 5,
+      comment: 'Outstanding conference! The keynote speakers were industry leaders and the networking opportunities were incredible. Highly recommend for anyone in tech.',
+      submittedAt: '2025-03-15T18:30:00.000Z'
+    })
+    
+    s.feedback.push({
+      id: Date.now() + 3001,
+      eventId: techSummit.id,
+      userId: 'maria@example.com',
+      userName: 'Maria Rodriguez',
+      rating: 4,
+      comment: 'Great insights into the latest tech trends. The panel discussions were engaging and I learned a lot about AI and machine learning applications.',
+      submittedAt: '2025-03-15T19:15:00.000Z'
+    })
+    
+    added = true
+  }
+  
+  if (added) {
+    s.stats.totalEvents = s.events.length
+    writeStore(s)
+  }
+  
+  return s
+}
+
+
+
+export function addFeedback(feedback) {
+  return updateStore(s => {
+    const id = feedback.id || Date.now()
+    s.feedback.push({ 
+      id, 
+      submittedAt: new Date().toISOString(),
+      ...feedback 
+    })
+    return s
+  })
+}
+
+export function getFeedbackForEvent(eventId) {
+  const s = readStore()
+  return (s.feedback || []).filter(f => f.eventId === eventId)
+}
+
+export function getUserFeedback(userId) {
+  const s = readStore()
+  return (s.feedback || []).filter(f => f.userId === userId)
 }
 
 

@@ -1,12 +1,12 @@
 /* Base layout matching the login page */
 .signup-root {
-  
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  
+  background: #1a1a1a;
   color: #ffffff;
-}
+} 
 
 .signup-card {
   width: 400px;
@@ -81,7 +81,7 @@
 .field-label { color: #ffffff; font-size: 14px; font-weight: 500; }
 
 .input {
-  width: 100%;
+  width: 92%;
   height: 44px;
   border-radius: 8px;
   background: #333333;

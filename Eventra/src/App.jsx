@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import AdminDashboard from './pages/AdminDashboard'
+import { CalendarProvider } from './context/CalendarContext'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login')
@@ -54,19 +55,27 @@ function App() {
   // If user is logged in, show appropriate dashboard
   if (currentUser) {
     if (currentUser.role === 'admin') {
-      return <AdminDashboard onLogout={handleLogout} />
+      return (
+        <CalendarProvider>
+          <AdminDashboard onLogout={handleLogout} />
+        </CalendarProvider>
+      )
     }
-    return <Dashboard onLogout={handleLogout} />
+    return (
+      <CalendarProvider>
+        <Dashboard onLogout={handleLogout} />
+      </CalendarProvider>
+    )
   }
 
   return (
-    <>
+    <CalendarProvider>
       {currentPage === 'login' ? (
         <Login onNavigateToSignup={() => navigateTo('signup')} onLoginSuccess={handleLoginSuccess} />
       ) : (
         <Signup onNavigateToLogin={() => navigateTo('login')} />
       )}
-    </>
+    </CalendarProvider>
   )
 }
 
